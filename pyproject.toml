@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "auto-posting"
+version = "0.1.0"
+description = "AI-powered auto-posting agent for Facebook and Instagram"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27.0",
+    "openai>=1.40.0",
+    "apscheduler>=3.10.4",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "cloudinary>=1.40.0",
+    "cryptography>=42.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-httpx>=0.30.0",
+    "ruff>=0.5.0",
+]
+
+[project.scripts]
+auto-posting = "auto_posting.main:main"
+setup-oauth = "scripts.setup_oauth:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/auto_posting"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
