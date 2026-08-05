@@ -14,7 +14,8 @@ An AI-powered agent that automatically generates text and images, then posts to 
 
 Before using this agent, you need:
 
-1. **Meta Developer Account**
+1. **Meta Developer Account & App**
+   - See **[Meta Setup Guide](docs/META_SETUP_GUIDE.md)** for detailed instructions
    - Create at [developers.facebook.com](https://developers.facebook.com)
    - Create a Meta App with Facebook Login product
    - Add required permissions: `pages_manage_posts`, `instagram_content_publish`, etc.
