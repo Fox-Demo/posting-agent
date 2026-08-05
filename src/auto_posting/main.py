@@ -3,19 +3,17 @@
 import argparse
 import asyncio
 import logging
-import signal
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 
 from auto_posting.auth.token_manager import TokenManager
-from auto_posting.config import Settings, get_settings
+from auto_posting.config import get_settings
 from auto_posting.content.image_generator import ImageGenerator
 from auto_posting.content.text_generator import TextGenerator
 from auto_posting.publishers.facebook import FacebookPublisher
 from auto_posting.publishers.instagram import InstagramPublisher
 from auto_posting.publishers.media_uploader import MediaUploader
-from auto_posting.scheduler.scheduler import PostScheduler
 from auto_posting.utils.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
@@ -36,17 +34,16 @@ def setup_logging(level: str = "INFO") -> None:
 class PostingAgent:
     """Main auto-posting agent that orchestrates content generation and publishing."""
 
-    settings: Settings
+    settings: object
     token_manager: TokenManager
     text_generator: TextGenerator
     image_generator: ImageGenerator
     media_uploader: MediaUploader
     facebook_publisher: FacebookPublisher
     instagram_publisher: InstagramPublisher
-    scheduler: PostScheduler
 
     @classmethod
-    def create(cls, settings: Settings | None = None) -> "PostingAgent":
+    def create(cls, settings=None) -> "PostingAgent":
         """Factory method to create a fully configured PostingAgent."""
         settings = settings or get_settings()
         token_manager = TokenManager(settings)
@@ -59,7 +56,6 @@ class PostingAgent:
             media_uploader=MediaUploader(settings),
             facebook_publisher=FacebookPublisher(settings, token_manager),
             instagram_publisher=InstagramPublisher(settings, token_manager),
-            scheduler=PostScheduler(settings),
         )
 
     async def close(self) -> None:
@@ -180,45 +176,6 @@ class PostingAgent:
 
         return results
 
-    async def scheduled_post(self, topic: str) -> None:
-        """Scheduled post callback."""
-        logger.info(f"Executing scheduled post for topic: {topic}")
-        results = await self.create_and_publish(topic)
-        logger.info(f"Scheduled post results: {results}")
-
-    def setup_scheduled_posts(
-        self,
-        topics: list[str],
-        interval_hours: int | None = None,
-    ) -> None:
-        """
-        Set up scheduled posts.
-
-        Args:
-            topics: List of topics to cycle through
-            interval_hours: Hours between posts
-        """
-        interval = interval_hours or self.settings.scheduler.default_interval_hours
-
-        for i, topic in enumerate(topics):
-            job_id = f"auto_post_{i}"
-            self.scheduler.add_interval_job(
-                job_id=job_id,
-                func=self.scheduled_post,
-                hours=interval,
-                topic=topic,
-            )
-
-        logger.info(f"Set up {len(topics)} scheduled posts at {interval}h intervals")
-
-    def start_scheduler(self) -> None:
-        """Start the scheduler."""
-        self.scheduler.start()
-
-    def stop_scheduler(self) -> None:
-        """Stop the scheduler."""
-        self.scheduler.stop()
-
 
 async def run_once(args: argparse.Namespace) -> None:
     """Run a single post."""
@@ -248,54 +205,15 @@ async def run_once(args: argparse.Namespace) -> None:
         for platform, data in results.get("platforms", {}).items():
             print(f"\n{platform.upper()}:")
             if data.get("success"):
-                print(f"  Status: Success")
+                print("  Status: Success")
                 print(f"  ID: {data.get('post_id') or data.get('media_id')}")
                 if data.get("permalink"):
                     print(f"  URL: {data['permalink']}")
             else:
-                print(f"  Status: Failed")
+                print("  Status: Failed")
                 print(f"  Error: {data.get('error')}")
 
     finally:
-        await agent.close()
-
-
-async def run_scheduler(args: argparse.Namespace) -> None:
-    """Run the scheduler."""
-    agent = PostingAgent.create()
-
-    # Parse topics from file or command line
-    topics = args.topics
-    if args.topics_file:
-        with open(args.topics_file) as f:
-            topics = [line.strip() for line in f if line.strip()]
-
-    if not topics:
-        print("Error: No topics provided. Use --topics or --topics-file")
-        return
-
-    agent.setup_scheduled_posts(topics, interval_hours=args.interval)
-    agent.start_scheduler()
-
-    print(f"\nScheduler started with {len(topics)} topics")
-    print(f"Interval: {args.interval or agent.settings.scheduler.default_interval_hours} hours")
-    print("Press Ctrl+C to stop\n")
-
-    # Handle shutdown
-    stop_event = asyncio.Event()
-
-    def signal_handler() -> None:
-        print("\nShutting down...")
-        stop_event.set()
-
-    loop = asyncio.get_event_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, signal_handler)
-
-    try:
-        await stop_event.wait()
-    finally:
-        agent.stop_scheduler()
         await agent.close()
 
 
@@ -320,26 +238,14 @@ def main() -> None:
     post_parser.add_argument("--instagram", action="store_true", help="Post to Instagram only")
     post_parser.add_argument("--no-image", action="store_true", help="Skip image generation")
 
-    # Schedule command
-    schedule_parser = subparsers.add_parser("schedule", help="Run scheduled posts")
-    schedule_parser.add_argument(
-        "--topics", nargs="+", default=[], help="Topics to post about"
-    )
-    schedule_parser.add_argument("--topics-file", help="File with topics (one per line)")
-    schedule_parser.add_argument(
-        "--interval", type=int, help="Hours between posts"
-    )
-
     # Verify command
-    verify_parser = subparsers.add_parser("verify", help="Verify configuration and tokens")
+    subparsers.add_parser("verify", help="Verify configuration and tokens")
 
     args = parser.parse_args()
     setup_logging(args.log_level)
 
     if args.command == "post":
         asyncio.run(run_once(args))
-    elif args.command == "schedule":
-        asyncio.run(run_scheduler(args))
     elif args.command == "verify":
         asyncio.run(verify_config())
     else:

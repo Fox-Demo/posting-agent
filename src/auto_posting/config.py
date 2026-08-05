@@ -62,11 +62,6 @@ class Settings(BaseSettings):
     cloudinary_api_secret: SecretStr = Field(default="", description="Cloudinary API secret")
     cloudinary_upload_folder: str = Field(default="auto_posting", description="Upload folder name")
 
-    # Scheduler settings
-    scheduler_timezone: str = Field(default="UTC", description="Timezone for scheduling")
-    scheduler_default_interval_hours: int = Field(default=6, description="Default posting interval")
-    scheduler_max_posts_per_day: int = Field(default=4, description="Maximum posts per day")
-
     @computed_field
     @property
     def meta_graph_api_base(self) -> str:
@@ -156,24 +151,6 @@ class CloudinarySettings:
         return self._s.cloudinary_upload_folder
 
 
-class SchedulerSettings:
-    """Wrapper for Scheduler settings access."""
-    def __init__(self, settings: Settings):
-        self._s = settings
-
-    @property
-    def timezone(self) -> str:
-        return self._s.scheduler_timezone
-
-    @property
-    def default_interval_hours(self) -> int:
-        return self._s.scheduler_default_interval_hours
-
-    @property
-    def max_posts_per_day(self) -> int:
-        return self._s.scheduler_max_posts_per_day
-
-
 class SettingsWrapper:
     """Wrapper providing nested access to settings."""
     def __init__(self, settings: Settings):
@@ -181,7 +158,6 @@ class SettingsWrapper:
         self.meta = MetaSettings(settings)
         self.openai = OpenAISettings(settings)
         self.cloudinary = CloudinarySettings(settings)
-        self.scheduler = SchedulerSettings(settings)
 
     def __getattr__(self, name: str):
         return getattr(self._settings, name)

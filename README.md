@@ -6,7 +6,6 @@ An AI-powered agent that automatically generates text and images, then posts to 
 
 - **AI Content Generation**: Uses OpenAI GPT-4 for text and DALL-E 3 for images
 - **Multi-Platform Publishing**: Posts to Facebook Pages and Instagram Business accounts
-- **Scheduled Posting**: Automate posts at specified intervals using APScheduler
 - **OAuth Token Management**: Secure token storage with automatic refresh
 - **Rate Limiting**: Built-in rate limiting to respect API limits
 
@@ -92,18 +91,6 @@ python -m auto_posting.main post "Your topic" --instagram
 python -m auto_posting.main post "Your topic" --no-image
 ```
 
-### Scheduled Posting
-```bash
-# Schedule posts with topics
-python -m auto_posting.main schedule --topics "Tech news" "AI updates" "Startup tips"
-
-# Custom interval (hours between posts)
-python -m auto_posting.main schedule --topics "Topic 1" "Topic 2" --interval 4
-
-# Load topics from file
-python -m auto_posting.main schedule --topics-file topics.txt
-```
-
 ### Test API Connections
 ```bash
 python scripts/test_post.py
@@ -132,8 +119,6 @@ auto_posting/
     │   ├── facebook.py         # Facebook Graph API
     │   ├── instagram.py        # Instagram Graph API
     │   └── media_uploader.py   # Cloudinary image hosting
-    ├── scheduler/
-    │   └── scheduler.py        # APScheduler jobs
     └── utils/
         ├── rate_limiter.py     # API rate limiting
         └── retry.py            # Exponential backoff
