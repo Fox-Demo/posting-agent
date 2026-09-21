@@ -189,7 +189,14 @@ def cloudinary_upload(env: dict[str, str], image: Path, transform: str) -> str:
 
     # Insert the transformation into the delivery URL: .../upload/<transform>/...
     secure_url = result["secure_url"]
-    return secure_url.replace("/image/upload/", f"/image/upload/{transform}/", 1)
+    url = secure_url.replace("/image/upload/", f"/image/upload/{transform}/", 1)
+
+    # Cloudinary honours the extension in the delivery URL, and Instagram has
+    # been known to sniff it rather than the Content-Type header. A PNG that
+    # f_jpg turns into JPEG still ends in .png, so rewrite the suffix to match.
+    if "f_jpg" in transform:
+        url = url.rsplit(".", 1)[0] + ".jpg"
+    return url
 
 
 # --------------------------------------------------------------------------- #
@@ -367,14 +374,21 @@ def main() -> int:
     transform = args.transform or (TRANSFORM_SQUARE if args.square else TRANSFORM_DEFAULT)
 
     try:
-        ig_id = resolve_ig_account_id(base, env, token)
-
         urls = list(args.image_url)
         for image in images:
             print(f"Uploading {image.name} to Cloudinary ...")
             url = cloudinary_upload(env, image, transform)
             print(f"  {url}")
             urls.append(url)
+
+        # Resolved after the uploads so that --dry-run can exercise Cloudinary
+        # on its own, before the Instagram side is finished being set up.
+        try:
+            ig_id = resolve_ig_account_id(base, env, token)
+        except GraphError:
+            if not args.dry_run:
+                raise
+            ig_id = "(unresolved - Instagram not set up yet)"
 
         print(f"\nIG account : {ig_id}")
         print(f"Caption    : {args.message}")
