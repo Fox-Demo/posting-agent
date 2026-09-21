@@ -2,6 +2,26 @@
 
 An AI-powered agent that automatically generates text and images, then posts to Facebook and Instagram.
 
+## Quick Start: post to Facebook
+
+Just want text + an image on your Page? You need **four** values, not three —
+`META_APP_ID` / `META_APP_SECRET` / `META_PAGE_ID` cannot publish on their own,
+a **Page Access Token** carrying `pages_manage_posts` does the actual posting.
+
+```bash
+# 1. Grab a short-lived User Token from the Graph API Explorer, then:
+python3 scripts/fb_get_page_token.py <SHORT_LIVED_USER_TOKEN>
+#    -> paste META_PAGE_ACCESS_TOKEN into .env
+
+# 2. Post text + a local image (no Cloudinary, no public URL needed)
+python3 scripts/fb_post.py --message "LFG GoalFi !" --image logo-gf.png
+```
+
+Both scripts are stdlib-only, so they run with any `python3`.
+Full walkthrough: **[Facebook Quickstart](docs/FACEBOOK_QUICKSTART.md)**.
+
+---
+
 ## Features
 
 - **AI Content Generation**: Uses OpenAI GPT-4 for text and DALL-E 3 for images
@@ -105,6 +125,8 @@ auto_posting/
 ├── pyproject.toml              # Project dependencies
 ├── README.md                   # This file
 ├── scripts/
+│   ├── fb_get_page_token.py    # Short-lived token -> Page Access Token
+│   ├── fb_post.py              # Post text + local images (stdlib only)
 │   ├── setup_oauth.py          # OAuth authentication setup
 │   └── test_post.py            # Test posting without AI
 └── src/auto_posting/
@@ -116,7 +138,7 @@ auto_posting/
     │   ├── text_generator.py   # OpenAI GPT-4 integration
     │   └── image_generator.py  # OpenAI DALL-E 3 integration
     ├── publishers/
-    │   ├── facebook.py         # Facebook Graph API
+    │   ├── facebook.py         # Facebook Graph API (URL + local-file uploads)
     │   ├── instagram.py        # Instagram Graph API
     │   └── media_uploader.py   # Cloudinary image hosting
     └── utils/

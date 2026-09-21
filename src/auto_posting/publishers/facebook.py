@@ -1,8 +1,10 @@
 """Facebook Graph API publisher."""
 
 import logging
+import mimetypes
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
 import httpx
@@ -134,6 +136,63 @@ class FacebookPublisher:
         response = await self.http_client.post(
             f"{self.api_base}/{self.page_id}/photos",
             data=params,
+        )
+
+        data = response.json()
+
+        if "error" in data:
+            error = data["error"]
+            raise ValueError(f"Facebook API error: {error.get('message', error)}")
+
+        post_id = data.get("post_id") or data.get("id")
+        logger.info(f"Published Facebook photo: {post_id}")
+
+        permalink = await self._get_permalink(post_id, access_token) if post_id else None
+
+        return FacebookPost(
+            post_id=post_id,
+            created_time=datetime.now(),
+            permalink=permalink,
+        )
+
+    @retry_with_backoff(max_retries=3, base_delay=2.0)
+    async def publish_photo_file(
+        self,
+        image_path: str | Path,
+        caption: str,
+        published: bool = True,
+    ) -> FacebookPost:
+        """
+        Publish a photo from a LOCAL file to Facebook Page.
+
+        Unlike publish_photo(), this uploads the raw bytes as multipart/form-data,
+        so the image needs no public URL and no Cloudinary account.
+
+        Args:
+            image_path: Path to a local image file
+            caption: Photo caption/message
+            published: Whether to publish immediately (False = unpublished/draft)
+
+        Returns:
+            FacebookPost with post ID and permalink
+        """
+        path = Path(image_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Image not found: {path}")
+
+        access_token = await self.token_manager.get_access_token()
+        mime_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+
+        logger.info(f"Uploading local photo {path.name} to Facebook Page {self.page_id}")
+
+        response = await self.http_client.post(
+            f"{self.api_base}/{self.page_id}/photos",
+            data={
+                "caption": caption,
+                "published": str(published).lower(),
+                "access_token": access_token,
+            },
+            files={"source": (path.name, path.read_bytes(), mime_type)},
         )
 
         data = response.json()

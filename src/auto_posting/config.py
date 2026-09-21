@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     meta_page_id: str = Field(default="", description="Facebook Page ID")
     meta_instagram_account_id: str = Field(default="", description="Instagram Business Account ID")
     meta_access_token: SecretStr | None = Field(default=None, description="Long-lived access token")
+    meta_page_access_token: SecretStr | None = Field(
+        default=None, description="Page Access Token (never expires; required to publish)"
+    )
     meta_api_version: str = Field(default="v20.0", description="Graph API version")
 
     # OpenAI settings
@@ -93,6 +96,10 @@ class MetaSettings:
     @property
     def access_token(self) -> SecretStr | None:
         return self._s.meta_access_token
+
+    @property
+    def page_access_token(self) -> SecretStr | None:
+        return self._s.meta_page_access_token
 
     @property
     def api_version(self) -> str:

@@ -166,6 +166,12 @@ class TokenManager:
 
     async def get_access_token(self) -> str:
         """Get current valid access token, refreshing if needed."""
+        # An explicitly configured Page Access Token wins: it never expires and
+        # needs no OAuth round-trip, so it is the simplest way to publish.
+        page_token = self.settings.meta.page_access_token
+        if page_token and page_token.get_secret_value():
+            return page_token.get_secret_value()
+
         token_data = await self.refresh_token()
 
         if token_data and token_data.get("page_access_token"):
@@ -178,7 +184,10 @@ class TokenManager:
         if self.settings.meta.access_token:
             return self.settings.meta.access_token.get_secret_value()
 
-        raise ValueError("No valid access token available. Run setup_oauth.py first.")
+        raise ValueError(
+            "No valid access token available. Set META_PAGE_ACCESS_TOKEN in .env "
+            "(see scripts/fb_get_page_token.py) or run scripts/setup_oauth.py."
+        )
 
     async def get_instagram_token(self) -> str:
         """Get access token for Instagram API calls."""

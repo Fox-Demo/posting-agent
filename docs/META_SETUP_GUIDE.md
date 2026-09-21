@@ -193,15 +193,43 @@ After completing all steps, your `.env` should have:
 META_APP_ID=1234567890123456
 META_APP_SECRET=abcdef1234567890abcdef1234567890
 META_PAGE_ID=123456789012345
+META_PAGE_ACCESS_TOKEN=EAAB...        # required to publish - see Step 11
 META_INSTAGRAM_ACCOUNT_ID=17841400000000000
-META_API_VERSION=v20.0
+META_API_VERSION=v21.0
 ```
+
+The first three IDs identify your app and Page but grant no ability to post.
+Every write call to the Graph API is authorised by `META_PAGE_ACCESS_TOKEN`.
+
+---
+
+## Step 11: Get the Page Access Token
+
+1. Open [Graph API Explorer](https://developers.facebook.com/tools/explorer/)
+2. **Meta App** = your app, **User or Page** = `User Token`
+3. Add permissions: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`
+4. Click **Generate Access Token** and copy it
+5. Upgrade it to a non-expiring Page token:
+
+```bash
+python3 scripts/fb_get_page_token.py <SHORT_LIVED_USER_TOKEN>
+```
+
+Paste the printed `META_PAGE_ID` and `META_PAGE_ACCESS_TOKEN` into `.env`.
 
 ---
 
 ## Verify Your Setup
 
-Run the OAuth setup script:
+Post something, without publishing it, to confirm the credentials load:
+
+```bash
+python3 scripts/fb_post.py -m "hello" -i logo-gf.png --dry-run
+```
+
+Then publish for real by dropping `--dry-run`.
+
+Alternatively, run the full browser OAuth flow (stores an encrypted token file):
 
 ```bash
 python scripts/setup_oauth.py
@@ -260,3 +288,4 @@ For production use with non-admin users, you need App Review:
 | 8 | Get Page ID | `META_PAGE_ID` |
 | 9 | Get Instagram ID | `META_INSTAGRAM_ACCOUNT_ID` |
 | 10 | Run OAuth Setup | Tokens saved |
+| 11 | Get Page Access Token | `META_PAGE_ACCESS_TOKEN` - required to publish |
